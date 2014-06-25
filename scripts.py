@@ -15,7 +15,7 @@ pat_Chinese = re.compile(u'[\u2E80-\u9FFF]')
 pat_allSymbols = re.compile(u'[，。、？:;‘’“”…—！·《》【】{}/-|]')
 pat_commonSymbols = re.compile(u'[，。、？:;‘’“”…—！·-]')
 
-
+###
 
 def get_source_txt(line):
     temp = line.strip('\n')
