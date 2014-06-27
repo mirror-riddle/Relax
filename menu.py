@@ -3,8 +3,9 @@
 
 import wx
 import sys
-import scripts
 import mydict
+import scripts
+import MySQLdb
 
 """
     =======================================================
@@ -36,12 +37,13 @@ class MyFrame(wx.Frame):
         btn_save = wx.Button(panel, label='Save')
         btn_store = wx.Button(panel, label='Store')
 
-        self.file_name = wx.TextCtrl(panel, value='uimain.csv')
-        self.list_en = wx.ListCtrl(panel, style=wx.LC_REPORT| 
-                                            wx.LC_HRULES| 
-                                                wx.LC_VRULES)
-        self.list_en.InsertColumn(0, 'id', format=wx.LIST_FORMAT_CENTER)
-        self.list_en.InsertColumn(1, 'source', format=wx.LIST_FORMAT_LEFT)
+        self.file_name = wx.TextCtrl(panel, value='info_pages.csv')
+        self.list_en = wx.ListCtrl(panel, style=wx.LC_REPORT|
+                                                wx.LC_HRULES|
+                                                wx.LC_VRULES|
+                                                wx.LC_SINGLE_SEL)
+        self.list_en.InsertColumn(0, 'id')    
+        self.list_en.InsertColumn(1, 'source')
         self.contents_en = wx.TextCtrl(panel, style=wx.TE_MULTILINE)
         self.contents_cn = wx.TextCtrl(panel, style=wx.TE_MULTILINE)
         self.contents_cn_space = wx.TextCtrl(panel, style=wx.TE_MULTILINE)
@@ -84,21 +86,39 @@ class MyFrame(wx.Frame):
         self.list_en.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_item_selected)
 
     def load(self, event):
+        conn = MySQLdb.connect(**scripts.LOGIN)
+        self.cursor = conn.cursor()
+        self.list_en.DeleteAllItems()
         with open(self.file_name.GetValue(), 'U') as source_file:
             self.source_list = source_file.readlines()
         for col, source in enumerate(self.source_list):
             source = source.decode(scripts.CODING)
             index = self.list_en.InsertStringItem(sys.maxint, str(col))
             self.list_en.SetStringItem(index, 1, source)
+        self.list_en.SetColumnWidth(0, wx.LIST_AUTOSIZE)
+        self.list_en.SetColumnWidth(1, wx.LIST_AUTOSIZE)
         self.clear_cn()
 
     def on_item_selected(self, event):
         self.index = event.GetIndex()
-        item = self.list_en.GetItem(self.index, 1)
-        source = item.GetText()
+        # source = self.list_en.GetItemText(index, 1)
+        # print source
+        source = self.source_list[self.index]
         self.source_txt = scripts.get_source_txt(source)
         self.contents_en.SetValue(self.source_txt[1])
         self.clear_cn()
+        self.search_trans()
+
+    def search_trans(self):
+        self.table_name = self.file_name.GetValue().split('.')[0]
+        select = """SELECT trans FROM `%s` 
+                    WHERE shortcut LIKE %%s
+                    OR source LIKE %%s
+                    LIMIT 2""" % (self.table_name)
+        self.cursor.execute(select, (self.source_txt[0], self.source_txt[1]))
+        results = self.cursor.fetchall()
+        for result in results:
+            self.contents_cn_space.AppendText(result[0])
 
     def addspace(self, event):
         usr_input = self.contents_cn.GetValue()     #usr_input coding: unicode

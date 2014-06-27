@@ -5,6 +5,7 @@ import re
 import sys
 # import datetime
 
+DEBUG = True
 CODING = sys.getfilesystemencoding()
 LOGIN = {'host'  :'127.0.0.1',
          'user':'root',
