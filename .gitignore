@@ -54,12 +54,5 @@ docs/_build/
 
 # my configurations
 temp.py
-offset.txt
-native_en/
-native_cns/
-ACOK1.3_en/
-ACOK1.3_cns/
 available source/
-uimain.csv
-uimain_cn.csv
-undone.csv
+new_language/
