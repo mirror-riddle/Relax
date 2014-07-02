@@ -53,6 +53,8 @@ coverage.xml
 docs/_build/
 
 # my configurations
+my.ini
 temp.py
 available source/
 new_language/
+pictures/

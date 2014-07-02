@@ -2,6 +2,7 @@
 #!usr/bin/env python
 
 import os
+import wx
 import sys
 import scripts
 import logging
@@ -12,122 +13,142 @@ import logging
 """
 
 
-class Mydict(object):
-    """
-    Two methods that finish jobs below:
-    add_db: add new source and translation to database
-    use_db: query translation from databse and auto-translate
-    """
-    def __init__(self):
-        scripts.config_logging()
+# class Mydict(object):
+#     """
+#     Two methods finish two jobs.
+#     add_db: add new source and translation to database
+#     use_db: query translation from databse and auto-translate
+#     """
 
-    def add_db(self, conn, cursor, file_name, en_dir, cns_dir):
-        table = os.path.splitext(file_name)[0]
-        source_path = os.path.join(en_dir, file_name)
-        trans_path = os.path.join(cns_dir, file_name)
-        source_dict = self.get_dict(source_path)[0]
-        trans_dict = self.get_dict(trans_path)[0]
-        create = """CREATE TABLE IF NOT EXISTS `%s`(
-                    id INT PRIMARY KEY AUTO_INCREMENT,
-                    shortcut VARCHAR(500) NOT NULL, 
-                    source VARCHAR(5000) NOT NULL, 
-                    translation VARCHAR(5000) NOT NULL, 
-                    create_time VARCHAR(30) NOT NULL)""" %table
-        cursor.execute(create)
-        logging.info('start merging %s' % source_path)
-        print 'start merging %s' % source_path
-        self.insert_db(conn, cursor, source_dict, trans_dict, table, source_path, trans_path)
-        logging.info('finish merging %s' % source_path)
-        print 'finish merging %s' % source_path
+class Createdict(object):
 
-    def insert_db(self, conn, cursor, source_dict, trans_dict, table, source_path, trans_path):
+
+    def add_db(self, cursor, file_name, en_dir, cns_dir, progress_dialog1):
+        self.cursor = cursor
+        self.table = os.path.splitext(file_name)[0]
+        self.source_path = os.path.join(en_dir, file_name)
+        self.trans_path = os.path.join(cns_dir, file_name)
+        self.source_dict = scripts.get_dict(source_path)[0]
+        self.trans_dict = scripts.get_dict(trans_path)[0]
+
+        create = """CREATE TABLE IF NOT EXISTS `%s`(id INT PRIMARY KEY AUTO_INCREMENT,
+                    shortcut VARCHAR(500) NOT NULL, source VARCHAR(8000) NOT NULL, 
+                    translation VARCHAR(5000) NOT NULL, create_time VARCHAR(30) NOT NULL)""" %self.table
+        self.cursor.execute(create)
+
+        logging.info('start merging %s' % self.source_path)
+        # print 'start merging %s' % self.source_path
+
+        self.insert_db(progress_dialog1)
+
+        logging.info('finish merging %s' % self.source_path)
+        # print 'finish merging %s' % self.source_path
+
+
+    def insert_db(self, progress_dialog1):
         create_time = scripts.cur_time()
-        for key in source_dict:
-            if trans_dict.has_key(key) and source_dict[key] != trans_dict[key]:
-                repeat = self.check_repeat(cursor, key, source_dict[key], table, source_path)
+        total_count = len(source_dict)
+        done_count = 0
+        title = 'merging %s.csv' %self.table
+        message = 'merging %s and %s' %(self.source_path, self.trans_path)
+        dialog = wx.ProgressDialog(title=title, message=message, maximum=total_count, 
+                                   parent=progress_dialog1, style=wx.PD_APP_MODAL|wx.PD_AUTO_HIDE
+                                   )
+        for key in self.source_dict:
+            if self.trans_dict.has_key(key) and self.source_dict[key] != self.trans_dict[key]:
+                repeat = self.check_repeat(key)
                 if not repeat:
                     insert = """INSERT INTO `%s`(shortcut, source, translation, create_time)
-                                VALUES(%%s, %%s, %%s, %%s)""" % table
-                    value = (key, source_dict[key], trans_dict[key], create_time)
+                                VALUES(%%s, %%s, %%s, %%s)""" % self.table
+                    value = (key, self.source_dict[key], self.trans_dict[key], create_time)
+                    #raise error when column length is not long enough.
                     try:
-                        cursor.execute(insert, value)
+                        self.cursor.execute(insert, value)
                     except Exception, e:
-                        logging.debug('='*50)
-                        debug_list = [e, source_path, key, trans_dict[key]]
+                        logging.debug('='*100)
+                        debug_list = [e, self.source_path, key, self.trans_dict[key]]
                         for item in debug_list:
                             logging.error(item)
+            done_count += 1
+            dialog.Update(done_count)
+        dialog.Destroy()
 
-    def use_db(self, conn, cursor, file_name, source_dir):
-        table = os.path.splitext(file_name)[0]
-        source_path = os.path.join(source_dir, file_name)
-        source_dict, reject_list = self.get_dict(source_path)
-        save_dir = os.path.join(os.getcwd(), 'new_language')
-        if not os.path.exists(save_dir):
-            os.mkdir(save_dir)
-        save_path = os.path.join(save_dir, file_name)
-        with open(save_path, 'w') as save_file:
-            logging.info('start auto-translating %s' %source_path)
-            print 'start auto-translating %s' %source_path
-            self.query_and_write(cursor, save_file, table, source_dict, reject_list, source_path)
-            logging.info('finish auto-translating %s' %source_path)
-            print 'finish auto-translating %s' %source_path
 
-    @staticmethod
-    def query_and_write(cursor, save_file, table, source_dict, reject_list, source_path):
-        total_num = len(source_dict)
-        done_num = 0
-        trans_list = []
-        for key in source_dict:
-            value = source_dict[key]
-            select = "SELECT translation FROM `%s` WHERE (shortcut, source) =(%%s, %%s) LIMIT 1" %table
-            try:
-                cursor.execute(select, (key, value))
-            except Exception, e:
-                logging.debug('='*50)
-                debug_list = [e, source_path, key, value]
-                for item in debug_list:
-                    logging.error(item)
-            else:
-                result = cursor.fetchone()
-                if result:
-                    source_dict[key] = result[0]  #value != source_dict[key] now
-                    done_num += 1
-            trans = ''.join([key, '|', source_dict[key], '\n'])
-            trans_list.append(trans.encode('utf8'))
-        trans_list.sort()
-        trans_list.extend(reject_list)
-        for trans_line in trans_list:
-            save_file.write(trans_line)
-        logging.info('translation rate: %s/%s' %(done_num, total_num))
-        print 'translation rate: %s/%s' %(done_num, total_num)
-
-    @staticmethod
-    def get_dict(file_path):
-        source_list, reject_list = scripts.get_source_list(file_path)
-        for index, line in enumerate(source_list):
-            line_list = scripts.get_line_list(line)
-            if len(line_list) == 2:
-                source_list[index] = line_list
-            else:
-                source_list[index] = None
-        scripts.remove_None(source_list)
-        return (dict(source_list), reject_list)
-
-    @staticmethod
-    def check_repeat(cursor, shortcut, source, table, source_path):
-        select = "SELECT id FROM `%s`WHERE (shortcut, source)=(%%s, %%s) LIMIT 1" %table
+    def check_repeat(self, shortcut):
+        select = "SELECT id FROM `%s`WHERE (shortcut, source)=(%%s, %%s) LIMIT 1" %self.table
+        #record error : Illegal mix of collations for operation = 
         try:
-            cursor.execute(select, (shortcut, source))
+            self.cursor.execute(select, (shortcut, self.source_dict[key]))
         except Exception, e:
-            logging.debug('='*50)
-            debug_list = [e, source_path, shortcut, source]
+            logging.debug('='*100)
+            debug_list = [e, self.source_path, shortcut, self.source_dict[key]]
             for item in debug_list:
                 logging.error(item)
             repeat = True
         else:
-            result = cursor.fetchone()     #result coding: unicode
+            result = self.cursor.fetchone()     #result coding: unicode
             if result:
                 repeat = True
             else:
                 repeat = False
         return repeat
+
+
+
+class Applydict(object):
+
+        
+    def use_db(self, cursor, file_name, source_dir, save_dir):
+        self.cursor = cursor
+        self.table = os.path.splitext(file_name)[0]
+        self.source_path = os.path.join(source_dir, file_name)
+        self.source_dict, self.reject_list = scripts.get_dict(self.source_path)
+        self.save_path = os.path.join(save_dir, file_name)
+        with open(self.save_path, 'w') as save_file:
+            logging.info('start auto-translating %s' %self.source_path)
+            # print 'start auto-translating %s' %source_path
+            self.query_and_write(save_file)
+            logging.info('finish auto-translating %s' %self.source_path)
+            # print 'finish auto-translating %s' %source_path
+
+
+    def query_and_write(self, save_file):
+        done_num = done_count = 0
+        trans_list = []
+        total_num = len(self.source_dict)
+        title = 'translating %s.csv' %self.table
+        message = 'translating %s to %s' %(self.source_path, self.save_path)
+        dialog = wx.ProgressDialog(title=title, message=message, maximum=total_num, 
+                                   parent=None, style=wx.PD_APP_MODAL|wx.PD_AUTO_HIDE
+                                   )
+        for key in self.source_dict:
+            value = self.source_dict[key]
+            select = "SELECT translation FROM `%s` WHERE (shortcut, source) =(%%s, %%s) LIMIT 1" % self.table
+            #record error when shortcut or source has mixed coding.
+            try:
+                self.cursor.execute(select, (key, value))
+            except Exception, e:
+                logging.debug('='*100)
+                debug_list = [e, self.source_path, key, value]
+                for item in debug_list:
+                    logging.error(item)
+            else:
+                result = self.cursor.fetchone()
+                if result:
+                    self.source_dict[key] = result[0]  #value != source_dict[key] now
+                    done_num += 1
+            done_count += 1
+            dialog.Update(done_count)
+
+            trans = scripts.get_translation(key, self.source_dict[key])
+            trans_list.append(trans.encode('utf8'))
+
+        dialog.Destroy()
+        trans_list.sort()
+        trans_list.extend(self.reject_list)
+
+        for trans_line in trans_list:
+            save_file.write(trans_line)
+
+        logging.info('translation rate: %s/%s' %(done_num, total_num))
+        # print 'translation rate: %s/%s' %(done_num, total_num)
