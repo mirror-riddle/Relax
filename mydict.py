@@ -31,10 +31,13 @@ class Createdict(object):
         self.source_dict = scripts.get_dict(self.source_path)[0]
         self.trans_dict = scripts.get_dict(self.trans_path)[0]
 
-        create = """CREATE TABLE IF NOT EXISTS `%s`(id INT PRIMARY KEY AUTO_INCREMENT,
+        create = """CREATE TABLE `%s`(id INT PRIMARY KEY AUTO_INCREMENT,
                     shortcut VARCHAR(500) NOT NULL, source VARCHAR(8000) NOT NULL, 
                     translation VARCHAR(5000) NOT NULL, create_time VARCHAR(30) NOT NULL)""" %self.table
-        self.cursor.execute(create)
+        try:
+            self.cursor.execute(create)
+        except:
+            pass
 
         logging.info('start merging %s' % self.source_path)
         # print 'start merging %s' % self.source_path
@@ -54,7 +57,7 @@ class Createdict(object):
         dialog = wx.ProgressDialog(title=title, message=message, 
             maximum=total_count, parent=None, style=wx.PD_APP_MODAL|wx.PD_AUTO_HIDE|wx.PD_CAN_ABORT
             )
-        icon = wx.Icon('pictures/relax32.ico')
+        icon = wx.Icon('resources/relax.ico')
         dialog.SetIcon(icon)
         dialog.ShowModal()
         for key in self.source_dict:

@@ -7,6 +7,7 @@ import sys
 import mydict
 import scripts
 import logging
+import webbrowser
 import wx.lib.filebrowsebutton as filebrowse
 """
 ===============================================================================
@@ -51,7 +52,7 @@ class MainFrame(wx.Frame):
         font.SetPointSize(11)
 
         #load and setup icon and taskbar icon.
-        icon = wx.Icon('pictures/relax32.ico')
+        icon = wx.Icon('resources/relax.ico')
         self.SetIcon(icon)
         self.taskbar_icon = wx.TaskBarIcon(wx.TBI_DOCK)
         self.taskbar_icon.SetIcon(icon, 'Relax')
@@ -89,15 +90,16 @@ class MainFrame(wx.Frame):
 
         #menu 2 Tools
         menu_tool = wx.Menu()
-        self.add_dict = menu_tool.Append(-1, '&Add dictionary\tCtrl+D', 'Add dictionary')
-        self.Bind(wx.EVT_MENU, self.on_add_dict, self.add_dict)
+        add_dict = menu_tool.Append(-1, '&Add dictionary\tCtrl+D', 'Add dictionary')
+        self.Bind(wx.EVT_MENU, self.on_add_dict, add_dict)
         menu_tool.AppendSeparator()
-        self.apply_dict = menu_tool.Append(-1, '&Use dictionary\tCtrl+Shift+D', 'Use dictionary')
-        self.Bind(wx.EVT_MENU, self.on_apply_dict, self.apply_dict)
+        apply_dict = menu_tool.Append(-1, '&Use dictionary\tCtrl+Shift+D', 'Use dictionary')
+        self.Bind(wx.EVT_MENU, self.on_apply_dict, apply_dict)
 
         #Menu 3 Help
         menu_help = wx.Menu()
         help_doc = menu_help.Append(-1, '&Help documents\tCtrl+H', 'Help documents')
+        self.Bind(wx.EVT_MENU, self.on_help, help_doc)
         
         #Menu Bar and Status Bar
         menu_bar = wx.MenuBar()
@@ -244,9 +246,8 @@ class MainFrame(wx.Frame):
             logging.info('add_dict_begin' + '*'*100)
             for file_name in file_list:
                 create_dict.add_db(self.cursor, file_name, en_dir, cns_dir)
-        self.conn.commit()
-
-        logging.info('add_dict_begin' + '*'*100)
+            self.conn.commit()
+            logging.info('add_dict_begin' + '*'*100)
 
 
     def get_dirs(self, label_text1, label_text2):
@@ -254,12 +255,27 @@ class MainFrame(wx.Frame):
         dir_dialog.Centre()
         dir_dialog.dir_browse1.SetLabel(label_text1)
         dir_dialog.dir_browse2.SetLabel(label_text2)
-        if dir_dialog.ShowModal() == wx.ID_OK:
-            text_ctrl1 = dir_dialog.dir_browse1.GetValue()
-            text_ctrl2 = dir_dialog.dir_browse2.GetValue()
-            return (text_ctrl1, text_ctrl2)
-        else:
-            return ('', '')
+        is_blank = True
+        while is_blank:
+            if dir_dialog.ShowModal() == wx.ID_OK:
+                text_ctrl1 = dir_dialog.dir_browse1.GetValue()
+                text_ctrl2 = dir_dialog.dir_browse2.GetValue()
+                if text_ctrl1 and text_ctrl2:
+                    result = (text_ctrl1, text_ctrl2)
+                    is_blank = False
+                    dir_dialog.Destroy()
+                else:
+                    message = 'You must choose both directories'
+                    title = 'Not all directories are chosen'
+                    dialog = wx.MessageDialog(self, message, title, wx.OK|wx.ICON_INFORMATION)
+                    dialog.ShowModal()
+                    dialog.Destroy()
+            else:
+                dir_dialog.Destroy()
+                result = ('', '')
+                is_blank = False
+        return result
+
 
 
     #When choose menu_use dictionary.
@@ -268,17 +284,7 @@ class MainFrame(wx.Frame):
         en_text = 'en directory'
         save_text = 'save directory'
         source_dir, save_dir = self.get_dirs(en_text, save_text)
-        # if result == wx.ID_OK:
-        #     source_dir = dir_dialog.dir_browse1.Get
-        # source_dir = self.dialog_get_dir('source')
-        # save_dir = self.dialog_get_dir('save')
-        if not save_dir:
-            message = 'You must choose a directory to save file!'
-            title = 'No directory chosen for saving file'
-            dialog = wx.MessageDialog(self, message, title, wx.OK | wx.ICON_INFORMATION)
-            dialog.ShowModal()
-            dialog.Destroy()
-        elif source_dir:
+        if source_dir and save_dir:
             file_list = os.listdir(source_dir)
             file_list.sort()
             logging.info('apply_dict_begin' + '*'*100)
@@ -354,6 +360,11 @@ class MainFrame(wx.Frame):
         self.list_en.SetStringItem(index, 1, trans)
         self.list_en.Focus(cur_index)
         self.list_en.SetItemState(cur_index, wx.LIST_STATE_SELECTED, wx.LIST_STATE_SELECTED)
+
+
+    #Help document
+    def on_help(self, event):
+        webbrowser.open('resources/README.html')
 
 
    #Disconnect from mysql-server and close window when exit.
@@ -455,12 +466,12 @@ class MainFrame(wx.Frame):
 
 
 class DirDialog(wx.Dialog):
-
+    '''this is the dialog designed for getting directories when add dict and apply dict'''
 
     def __init__(self, parent):
         wx.Dialog.__init__(self, parent, title='directory dialog', size=(300, 200))
 
-        icon = wx.Icon('pictures/relax32.ico')
+        icon = wx.Icon('resources/relax.ico')
         self.SetIcon(icon)
 
         panel = wx.Panel(self)

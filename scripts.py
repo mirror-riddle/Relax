@@ -125,7 +125,7 @@ def get_dict(file_path):
 
 #Get mysql login information from my.ini
 def get_mysql_login():
-    with open('my.ini', 'U') as configure_file:
+    with open('resources/my.ini', 'U') as configure_file:
         configure_list = configure_file.readlines()
     #remove conmments and blank lines
 
@@ -158,8 +158,11 @@ def conn_mysql():
     conn = MySQLdb.connect(**login)
     cursor = conn.cursor()
     database = 'translation'
-    create = 'CREATE DATABASE IF NOT EXISTS `%s`' %database
-    cursor.execute(create)
+    create = 'CREATE DATABASE `%s`' %database
+    try:
+        cursor.execute(create)
+    except:
+        pass
     conn.select_db(database)
 
     return (conn, cursor)

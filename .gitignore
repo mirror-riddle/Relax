@@ -53,9 +53,10 @@ coverage.xml
 docs/_build/
 
 # my configurations
-README.html
-my.ini
+setup.py
 temp.py
 available source/
 new_language/
-pictures/
+dist/
+resources/
+build/
