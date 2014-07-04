@@ -7,7 +7,7 @@ import sys
 import mydict
 import scripts
 import logging
-
+import wx.lib.filebrowsebutton as filebrowse
 """
 ===============================================================================
                             main menu
@@ -21,16 +21,19 @@ class MyApp(wx.App):
         wx.App.__init__(self, redirect, filename)
 
     def OnInit(self):
-        self.frame = MyFrame(None)
-        self.frame.save.Enable(False)
-        self.frame.store.Enable(False)
-        self.frame.undo.Enable(False)
-        self.frame.redo.Enable(False)
-        self.frame.Show()
+        main_frame = MainFrame(None)
+        main_frame.Centre()
+        self.SetTopWindow(main_frame)
+        main_frame.save.Enable(False)
+        main_frame.save_as.Enable(False)
+        main_frame.store.Enable(False)
+        main_frame.undo.Enable(False)
+        main_frame.redo.Enable(False)
+        main_frame.Show()
         return True
 
 
-class MyFrame(wx.Frame):
+class MainFrame(wx.Frame):
 
 
     def __init__(self, parent=None):
@@ -48,7 +51,7 @@ class MyFrame(wx.Frame):
         font.SetPointSize(11)
 
         #load and setup icon and taskbar icon.
-        icon = wx.Icon('pictures/relax.ico')
+        icon = wx.Icon('pictures/relax32.ico')
         self.SetIcon(icon)
         self.taskbar_icon = wx.TaskBarIcon(wx.TBI_DOCK)
         self.taskbar_icon.SetIcon(icon, 'Relax')
@@ -177,6 +180,7 @@ class MyFrame(wx.Frame):
             self.list_en.SetColumnWidth(1, wx.LIST_AUTOSIZE)
             self.list_en.SetColumnWidth(1, wx.LIST_AUTOSIZE)
             self.save.Enable(True)
+            self.save_as.Enable(True)
             self.cont_en.SetValue('')
             self.clear_cn()
 
@@ -231,25 +235,43 @@ class MyFrame(wx.Frame):
     #When choose menu_add dictionary.
     def on_add_dict(self, event):
         create_dict = mydict.Createdict()
-        en_dir = self.dialog_get_dir('source')
-        cns_dir = self.dialog_get_dir('translation')
-
+        en_text = 'en directory'
+        cns_text = 'cns directory'
+        en_dir, cns_dir = self.get_dirs(en_text, cns_text)
         if en_dir and cns_dir:
             file_list = os.listdir(en_dir)
             file_list.sort()
             logging.info('add_dict_begin' + '*'*100)
             for file_name in file_list:
-                create_dict.add_db(self.cursor, file_name, en_dir, cns_dir, progress_dialog1)
+                create_dict.add_db(self.cursor, file_name, en_dir, cns_dir)
         self.conn.commit()
 
         logging.info('add_dict_begin' + '*'*100)
 
 
+    def get_dirs(self, label_text1, label_text2):
+        dir_dialog = DirDialog(self)
+        dir_dialog.Centre()
+        dir_dialog.dir_browse1.SetLabel(label_text1)
+        dir_dialog.dir_browse2.SetLabel(label_text2)
+        if dir_dialog.ShowModal() == wx.ID_OK:
+            text_ctrl1 = dir_dialog.dir_browse1.GetValue()
+            text_ctrl2 = dir_dialog.dir_browse2.GetValue()
+            return (text_ctrl1, text_ctrl2)
+        else:
+            return ('', '')
+
+
     #When choose menu_use dictionary.
     def on_apply_dict(self, event):
         apply_dict = mydict.Applydict()
-        source_dir = self.dialog_get_dir('source')
-        save_dir = self.dialog_get_dir('save')
+        en_text = 'en directory'
+        save_text = 'save directory'
+        source_dir, save_dir = self.get_dirs(en_text, save_text)
+        # if result == wx.ID_OK:
+        #     source_dir = dir_dialog.dir_browse1.Get
+        # source_dir = self.dialog_get_dir('source')
+        # save_dir = self.dialog_get_dir('save')
         if not save_dir:
             message = 'You must choose a directory to save file!'
             title = 'No directory chosen for saving file'
@@ -337,15 +359,15 @@ class MyFrame(wx.Frame):
    #Disconnect from mysql-server and close window when exit.
    #This is how it work when click menu_exit
     def on_exit(self, event):
-        scripts.disc_mysql(self.conn, self.cursor)
-        self.taskbar_icon.RemoveIcon()
         self.Close()
 
 
     #This is how it work when click the X button.
     def on_close(self, event):
+        scripts.disc_mysql(self.conn, self.cursor)
+        #very important! must destroy taskbar_icon, otherwise MainLoop() won't break.
+        self.taskbar_icon.Destroy()
         self.Destroy()
-        self.taskbar_icon.RemoveIcon()
 
 
     #Search translation from mysql database when source is selected.
@@ -431,6 +453,34 @@ class MyFrame(wx.Frame):
             for source in new_source_list:
                 trans_file.write(source)
 
+
+class DirDialog(wx.Dialog):
+
+
+    def __init__(self, parent):
+        wx.Dialog.__init__(self, parent, title='directory dialog', size=(300, 200))
+
+        icon = wx.Icon('pictures/relax32.ico')
+        self.SetIcon(icon)
+
+        panel = wx.Panel(self)
+        ok_btn = wx.Button(panel, wx.ID_OK, 'OK')
+        cancel_btn = wx.Button(panel, wx.ID_CANCEL, 'Cancel')
+        self.dir_browse1 = filebrowse.DirBrowseButton(panel, -1, labelText = 'source directory:', 
+            newDirectory=True, startDirectory=os.getcwd()
+            )
+        self.dir_browse2 = filebrowse.DirBrowseButton(panel, -1, labelText = 'translation directory:', 
+            newDirectory=True, startDirectory=os.getcwd()
+            )
+        hbox = wx.BoxSizer()
+        hbox.Add(ok_btn, proportion=0, flag=wx.ALL, border=5)
+        hbox.Add(cancel_btn, proportion=0, flag=wx.ALL, border=5)
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(self.dir_browse1, proportion=0, flag=wx.ALL, border=5)
+        vbox.Add(self.dir_browse2, proportion=0, flag=wx.ALL, border=5)
+        vbox.Add(hbox, proportion=0, flag=wx.ALL, border=5)
+        panel.SetSizer(vbox)
+        panel.Fit()
 
 
 if __name__ == '__main__':

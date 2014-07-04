@@ -53,6 +53,7 @@ coverage.xml
 docs/_build/
 
 # my configurations
+README.html
 my.ini
 temp.py
 available source/

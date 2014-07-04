@@ -23,13 +23,13 @@ import logging
 class Createdict(object):
 
 
-    def add_db(self, cursor, file_name, en_dir, cns_dir, progress_dialog1):
+    def add_db(self, cursor, file_name, en_dir, cns_dir):
         self.cursor = cursor
         self.table = os.path.splitext(file_name)[0]
         self.source_path = os.path.join(en_dir, file_name)
         self.trans_path = os.path.join(cns_dir, file_name)
-        self.source_dict = scripts.get_dict(source_path)[0]
-        self.trans_dict = scripts.get_dict(trans_path)[0]
+        self.source_dict = scripts.get_dict(self.source_path)[0]
+        self.trans_dict = scripts.get_dict(self.trans_path)[0]
 
         create = """CREATE TABLE IF NOT EXISTS `%s`(id INT PRIMARY KEY AUTO_INCREMENT,
                     shortcut VARCHAR(500) NOT NULL, source VARCHAR(8000) NOT NULL, 
@@ -39,21 +39,24 @@ class Createdict(object):
         logging.info('start merging %s' % self.source_path)
         # print 'start merging %s' % self.source_path
 
-        self.insert_db(progress_dialog1)
+        self.insert_db()
 
         logging.info('finish merging %s' % self.source_path)
         # print 'finish merging %s' % self.source_path
 
 
-    def insert_db(self, progress_dialog1):
+    def insert_db(self):
         create_time = scripts.cur_time()
-        total_count = len(source_dict)
+        total_count = len(self.source_dict)
         done_count = 0
         title = 'merging %s.csv' %self.table
         message = 'merging %s and %s' %(self.source_path, self.trans_path)
-        dialog = wx.ProgressDialog(title=title, message=message, maximum=total_count, 
-                                   parent=progress_dialog1, style=wx.PD_APP_MODAL|wx.PD_AUTO_HIDE
-                                   )
+        dialog = wx.ProgressDialog(title=title, message=message, 
+            maximum=total_count, parent=None, style=wx.PD_APP_MODAL|wx.PD_AUTO_HIDE|wx.PD_CAN_ABORT
+            )
+        icon = wx.Icon('pictures/relax32.ico')
+        dialog.SetIcon(icon)
+        dialog.ShowModal()
         for key in self.source_dict:
             if self.trans_dict.has_key(key) and self.source_dict[key] != self.trans_dict[key]:
                 repeat = self.check_repeat(key)
@@ -78,10 +81,10 @@ class Createdict(object):
         select = "SELECT id FROM `%s`WHERE (shortcut, source)=(%%s, %%s) LIMIT 1" %self.table
         #record error : Illegal mix of collations for operation = 
         try:
-            self.cursor.execute(select, (shortcut, self.source_dict[key]))
+            self.cursor.execute(select, (shortcut, self.source_dict[shortcut]))
         except Exception, e:
             logging.debug('='*100)
-            debug_list = [e, self.source_path, shortcut, self.source_dict[key]]
+            debug_list = [e, self.source_path, shortcut, self.source_dict[shortcut]]
             for item in debug_list:
                 logging.error(item)
             repeat = True
