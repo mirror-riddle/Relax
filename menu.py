@@ -364,7 +364,7 @@ class MainFrame(wx.Frame):
 
     #Help document
     def on_help(self, event):
-        webbrowser.open('resources/README.html')
+        webbrowser.open('README.html')
 
 
    #Disconnect from mysql-server and close window when exit.
