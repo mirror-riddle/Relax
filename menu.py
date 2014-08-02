@@ -3,12 +3,12 @@
 
 import wx
 import os
-import sys
 import mydict
 import scripts
 import logging
 import webbrowser
 import wx.lib.filebrowsebutton as filebrowse
+
 """
 ===============================================================================
                             main menu
@@ -51,10 +51,10 @@ class MainFrame(wx.Frame):
         font.SetStyle(wx.FONTSTYLE_NORMAL)
         font.SetPointSize(11)
 
-        #load and setup icon and taskbar icon.
-        icon = wx.Icon('resources/relax.ico')
+        #load and setup icon and task bar icon.
+        icon = wx.Icon('resources/relax.ico', wx.BITMAP_TYPE_ANY)
         self.SetIcon(icon)
-        self.taskbar_icon = wx.TaskBarIcon(wx.TBI_DOCK)
+        self.taskbar_icon = wx.TaskBarIcon()
         self.taskbar_icon.SetIcon(icon, 'Relax')
         # self.taskbar_icon.CreatePopupMenu()
         
@@ -76,8 +76,8 @@ class MainFrame(wx.Frame):
         self.save_as = menu_file.Append(-1, '&Save as...\tCtrl+Shift+S', 'Save as...')
         menu_file.AppendSeparator()
         self.Bind(wx.EVT_MENU, self.on_save_as, self.save_as)
-        exit = menu_file.Append(-1, '&Exit\tCtrl+E', 'Exit')
-        self.Bind(wx.EVT_MENU, self.on_exit, exit)
+        leave = menu_file.Append(-1, '&Exit\tCtrl+E', 'Exit')
+        self.Bind(wx.EVT_MENU, self.on_leave, leave)
         
         #menu 1 Edit
         menu_edit = wx.Menu()
@@ -341,7 +341,6 @@ class MainFrame(wx.Frame):
         source = self.undo_dict['source']
         usr_input = self.undo_dict['usr_input']
         raw_trans = self.undo_dict['raw_trans']
-        trans = self.undo_dict['trans']
 
         self.list_en.Focus(index)
         self.source_list[index] = source
@@ -367,9 +366,9 @@ class MainFrame(wx.Frame):
         webbrowser.open('README.html')
 
 
-   #Disconnect from mysql-server and close window when exit.
-   #This is how it work when click menu_exit
-    def on_exit(self, event):
+    #Disconnect from mysql-server and close window when leave.
+    #This is how it work when click menu_leave
+    def on_leave(self, event):
         self.Close()
 
 
@@ -471,7 +470,7 @@ class DirDialog(wx.Dialog):
     def __init__(self, parent):
         wx.Dialog.__init__(self, parent, title='directory dialog', size=(300, 200))
 
-        icon = wx.Icon('resources/relax.ico')
+        icon = wx.Icon('resources/relax.ico', wx.BITMAP_TYPE_ANY)
         self.SetIcon(icon)
 
         panel = wx.Panel(self)

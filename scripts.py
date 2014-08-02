@@ -2,7 +2,6 @@
 #!usr/bin/env python
 
 import re
-import sys
 import datetime
 import MySQLdb
 import logging
@@ -17,7 +16,6 @@ pat_Chinese = re.compile(u'[\u2E80-\u9FFF]')
 pat_punctuations = re.compile(u'[，。、！？…—·]')
 pat_brackets = re.compile(u'[（）【】《》{}/：；‘’“” ]')
 
-
 #Split source line into a list including shortcut and pure source
 def get_line_list(line):
     temp = line.strip('*\n')
@@ -25,12 +23,13 @@ def get_line_list(line):
     return line_list
 
 
-#This function is used to aviod messed indexingresulted from
+#This function is used to avoid messed indexing resulted from
 #removing list item in a loop.
 def remove_None(source_list):
     count = source_list.count(None)
-    for i in range(count):
+    while count > 0:
         source_list.remove(None)
+        count -= 1
 
 
 #Join shortcut and raw_translation into translation, contrary to
@@ -75,11 +74,10 @@ def add_space(usr_input):
 
 #Get current time in format: 2014-07-01 17:48:46
 def cur_time():
-	t = datetime.time(1,2,3)
-	d = datetime.date.today()
-	cur_time = datetime.datetime.combine(d,t)
-
-	return cur_time 
+    t = datetime.time(1,2,3)
+    d = datetime.date.today()
+    cur_time = datetime.datetime.combine(d,t)
+    return cur_time 
 
 
 #source list: source that can be decode('utf8')
@@ -93,7 +91,7 @@ def get_source_list(file_path):
         if index == 0:
             #cut off stupid BOM, proved useful and safe
             source_list[index] = line.lstrip('\xef\xbb\xbf')
-        #record error : 'utf8' codec can't decode byte 0x85 in position...
+        #record error : 'utf8' can't decode byte 0x85 in position...
         #due to line with unwanted character.
         try:
             source_list[index] = line.decode('utf8')
@@ -127,7 +125,7 @@ def get_dict(file_path):
 def get_mysql_login():
     with open('resources/my.ini', 'U') as configure_file:
         configure_list = configure_file.readlines()
-    #remove conmments and blank lines
+    #remove comments and blank lines
 
     for index, item in enumerate(configure_list):
         item_list = item.split('#')
@@ -176,4 +174,4 @@ def disc_mysql(conn, cursor):
 def config_logging():
     log_filename = 'log.log'
     log_format = '[%(asctime)s][%(filename)s][%(funcName)s][%(levelname)s][%(message)s]'
-    logging.basicConfig(filename= log_filename, filemode='a', format=log_format, level=logging.DEBUG)
+    logging.basicConfig(filename= log_filename, filemode='w', format=log_format, level=logging.DEBUG)
