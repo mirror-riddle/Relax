@@ -3,6 +3,7 @@
 
 import re
 import datetime
+import pymongo
 import MySQLdb
 import logging
 
@@ -153,6 +154,7 @@ def get_mysql_login():
 
 def conn_mysql():
     login = get_mysql_login()
+    print login
     conn = MySQLdb.connect(**login)
     cursor = conn.cursor()
     database = 'translation'
@@ -165,7 +167,12 @@ def conn_mysql():
 
     return (conn, cursor)
 
+def connect_mongo():
+    client = pymongo.MongoClient()
+    database = client.translation
+    return database
 
+    
 def disc_mysql(conn, cursor):
     cursor.close()
     conn.close()

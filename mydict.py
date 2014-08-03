@@ -22,90 +22,59 @@ import logging
 class Createdict(object):
 
 
-    def add_db(self, cursor, file_name, en_dir, cns_dir):
-        self.cursor = cursor
-        self.table = os.path.splitext(file_name)[0]
+    def add_db(self, database, file_name, en_dir, cns_dir):
+        collection = os.path.splitext(file_name)[0]
         self.source_path = os.path.join(en_dir, file_name)
         self.trans_path = os.path.join(cns_dir, file_name)
         self.source_dict = scripts.get_dict(self.source_path)[0]
         self.trans_dict = scripts.get_dict(self.trans_path)[0]
-
-        create = """CREATE TABLE `%s` IF NOT EXISTS (id INT PRIMARY KEY AUTO_INCREMENT,
-                    shortcut VARCHAR(500) NOT NULL, source VARCHAR(8000) NOT NULL, 
-                    translation VARCHAR(5000) NOT NULL, create_time VARCHAR(30) NOT NULL)""" %self.table
-        try:
-            self.cursor.execute(create)
-        except:
-            pass
-
+        self.collection = database[collection]
         logging.info('start merging %s' % self.source_path)
-        # print 'start merging %s' % self.source_path
-
         self.insert_db()
-
         logging.info('finish merging %s' % self.source_path)
-        # print 'finish merging %s' % self.source_path
-
 
     def insert_db(self):
         create_time = scripts.cur_time()
         total_count = len(self.source_dict)
         done_count = 0
-        title = 'merging %s.csv' %self.table
+        title = 'merging %s.csv' %self.collection
         message = 'merging %s and %s' %(self.source_path, self.trans_path)
         dialog = wx.ProgressDialog(title=title, message=message, 
-            maximum=total_count, parent=None, style=wx.PD_APP_MODAL|wx.PD_AUTO_HIDE|wx.PD_CAN_ABORT
-            )
+                                   maximum=total_count, parent=None,
+                                   style=wx.PD_APP_MODAL|wx.PD_AUTO_HIDE|wx.PD_CAN_ABORT
+                                   )
         icon = wx.Icon('resources/relax.ico', wx.BITMAP_TYPE_ANY)
         dialog.SetIcon(icon)
-        dialog.ShowModal()
         for key in self.source_dict:
             if self.trans_dict.has_key(key) and self.source_dict[key] != self.trans_dict[key]:
-                repeat = self.check_repeat(key)
-                if not repeat:
-                    insert = """INSERT INTO `%s`(shortcut, source, translation, create_time)
-                                VALUES(%%s, %%s, %%s, %%s)""" % self.table
-                    value = (key, self.source_dict[key], self.trans_dict[key], create_time)
-                    #raise error when column length is not long enough.
-                    try:
-                        self.cursor.execute(insert, value)
-                    except Exception, e:
-                        logging.debug('='*100)
-                        debug_list = [e, self.source_path, key, self.trans_dict[key]]
-                        for item in debug_list:
-                            logging.error(item)
+                if not self.check_repeat(key):
+                    insert_item = {'shortcut' : key,
+                                   'create_time' : create_time,
+                                   'source' : self.source_dict[key],
+                                   'translation' : self.trans_dict[key]
+                                   }
+                    self.collection.insert(insert_item)
             done_count += 1
             dialog.Update(done_count)
         dialog.Destroy()
 
 
     def check_repeat(self, shortcut):
-        select = "SELECT id FROM `%s`WHERE (shortcut, source)=(%%s, %%s) LIMIT 1" %self.table
-        #record error : Illegal mix of collations for operation = 
-        try:
-            self.cursor.execute(select, (shortcut, self.source_dict[shortcut]))
-        except Exception, e:
-            logging.debug('='*100)
-            debug_list = [e, self.source_path, shortcut, self.source_dict[shortcut]]
-            for item in debug_list:
-                logging.error(item)
-            repeat = True
+        criteria = {'shortcut' : shortcut, 'source' : self.source_dict[shortcut]}
+        projection = {'shortcut' : 1, '_id' : 0}
+        result = self.collection.find_one(criteria, projection)
+        if result:
+            return True
         else:
-            result = self.cursor.fetchone()     #result coding: unicode
-            if result:
-                repeat = True
-            else:
-                repeat = False
-        return repeat
-
+            return False
 
 
 class Applydict(object):
 
         
-    def use_db(self, cursor, file_name, source_dir, save_dir):
-        self.cursor = cursor
-        self.table = os.path.splitext(file_name)[0]
+    def use_db(self, database, file_name, source_dir, save_dir):
+        collection = os.path.splitext(file_name)[0]
+        self.collection = database[collection]
         self.source_path = os.path.join(source_dir, file_name)
         self.source_dict, self.reject_list = scripts.get_dict(self.source_path)
         self.save_path = os.path.join(save_dir, file_name)
@@ -121,33 +90,23 @@ class Applydict(object):
         done_num = done_count = 0
         trans_list = []
         total_num = len(self.source_dict)
-        title = 'translating %s.csv' %self.table
+        title = 'translating %s.csv' %self.collection
         message = 'translating %s to %s' %(self.source_path, self.save_path)
         dialog = wx.ProgressDialog(title=title, message=message, maximum=total_num, 
                                    parent=None, style=wx.PD_APP_MODAL|wx.PD_AUTO_HIDE
                                    )
         for key in self.source_dict:
             value = self.source_dict[key]
-            select = "SELECT translation FROM `%s` WHERE (shortcut, source) =(%%s, %%s) LIMIT 1" % self.table
-            #record error when shortcut or source has mixed coding.
-            try:
-                self.cursor.execute(select, (key, value))
-            except Exception, e:
-                logging.debug('='*100)
-                debug_list = [e, self.source_path, key, value]
-                for item in debug_list:
-                    logging.error(item)
-            else:
-                result = self.cursor.fetchone()
-                if result:
-                    self.source_dict[key] = result[0]  #value != source_dict[key] now
-                    done_num += 1
+            criteria = {'shortcut' : key, 'source' : value}
+            projection = {'translation' : 1, '_id' : 0}
+            result = self.collection.find_one(criteria, projection)
+            if result:
+                self.source_dict[key] = result.get('translation')
+                done_num += 1
             done_count += 1
             dialog.Update(done_count)
-
             trans = scripts.get_translation(key, self.source_dict[key])
             trans_list.append(trans.encode('utf8'))
-
         dialog.Destroy()
         trans_list.sort()
         trans_list.extend(self.reject_list)

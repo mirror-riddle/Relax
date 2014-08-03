@@ -40,10 +40,13 @@ class MainFrame(wx.Frame):
     def __init__(self, parent=None):
         wx.Frame.__init__(self, parent=None, title='Relax', size=(1000,600))
 
-        #connect to mysql-server
-        self.conn, self.cursor = scripts.conn_mysql()
+        # connect to mysql-server
+        # self.conn, self.cursor = scripts.conn_mysql()
+        
+        #connect to mongo
+        self.database = scripts.connect_mongo()
 
-        #config logging 
+        # config logging 
         scripts.config_logging()
 
         #setup font
@@ -177,7 +180,7 @@ class MainFrame(wx.Frame):
                 self.list_en.SetStringItem(index, 1, source)
                 done_count += 1
                 dialog.Update(done_count)
-                dialog.Destroy()
+            dialog.Destroy()
 
             self.list_en.SetColumnWidth(1, wx.LIST_AUTOSIZE)
             self.list_en.SetColumnWidth(1, wx.LIST_AUTOSIZE)
@@ -245,8 +248,7 @@ class MainFrame(wx.Frame):
             file_list.sort()
             logging.info('add_dict_begin' + '*'*100)
             for file_name in file_list:
-                create_dict.add_db(self.cursor, file_name, en_dir, cns_dir)
-            self.conn.commit()
+                create_dict.add_db(self.database, file_name, en_dir, cns_dir)
             logging.info('add_dict_begin' + '*'*100)
 
 
@@ -289,7 +291,7 @@ class MainFrame(wx.Frame):
             file_list.sort()
             logging.info('apply_dict_begin' + '*'*100)
             for file_name in file_list:
-                apply_dict.use_db(self.cursor, file_name, source_dir, save_dir)
+                apply_dict.use_db(self.database, file_name, source_dir, save_dir)
             logging.info('apply_dict_end' + '*'*100)
 
 
@@ -374,30 +376,17 @@ class MainFrame(wx.Frame):
 
     #This is how it work when click the X button.
     def on_close(self, event):
-        scripts.disc_mysql(self.conn, self.cursor)
         #very important! must destroy taskbar_icon, otherwise MainLoop() won't break.
         self.taskbar_icon.Destroy()
         self.Destroy()
 
-
-    #Search translation from mysql database when source is selected.
     def search_trans(self):
         table = os.path.splitext(self.file_name)[0]
-        select = """SELECT translation FROM `%s` WHERE shortcut LIKE %%s OR source LIKE %%s LIMIT 1""" % table
-        #record error : 'utf8' codec can't decode byte 0x85 in position...
-        #due to line with unwanted character, may remove this exception if
-        #mysql character and collation are both set properly.
-        try:
-            self.cursor.execute(select, (self.shortcut, self.raw_source))
-        except Exception, e:
-            logging.debug('='*50)
-            debug_list = [e, self.file_path, self.shortcut, self.raw_source]
-            for item in debug_list:
-                logging.error(item)
-        else:
-            result = self.cursor.fetchone()
-            if result:
-                self.cont_cns_space.SetValue(result[0])
+        criteria = {'shortcut' : self.shortcut}
+        projection = {'translation' : 1, '_id' : 0}
+        result = self.database[table].find_one(criteria, projection)
+        if result:
+            self.cont_cns_space.SetValue(result.get('translation'))
 
 
     #Clear cont_cns and cont_cns_space.
