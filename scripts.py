@@ -193,7 +193,7 @@ def disc_mysql(conn, cursor):
 def config_logging():
     """using logging to record errors and info"""
 
-    log_filename = 'relaxlog.log'
+    log_filename = 'resources/relaxlog.log'
     log_format = """[%(asctime)s][%(filename)s][%(funcName)s]
                     [%(levelname)s][%(message)s]"""
     logging.basicConfig(filename=log_filename, filemode='w',

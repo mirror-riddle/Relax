@@ -360,7 +360,7 @@ class MainFrame(wx.Frame):
 
     # Help document
     def on_help(self, event):
-        webbrowser.open('README.html')
+        webbrowser.open('resources/README.html')
 
     # Disconnect from mysql-server and close window when leave.
     # This is how it work when click menu_leave
