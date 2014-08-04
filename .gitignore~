@@ -53,10 +53,6 @@ coverage.xml
 docs/_build/
 
 # my configurations
-setup.py
-temp.py
 available source/
-new_language/
-dist/
-build/
 .settings/
+.gitigore~
