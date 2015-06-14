@@ -1,19 +1,20 @@
-# -*- coding: utf8 -*-
-# !usr/bin/env python
+# -*- coding: utf-8 -*-
+#! /usr/bin/env python
 
 """
-===============================================================================
-                            main menu
-===============================================================================
+description: main menu
+
 """
+
+import mydict
+import scripts
 
 import os
 import wx
-import mydict
-import scripts
+import wx.adv
+import wx.lib.filebrowsebutton
 import logging
 import webbrowser
-from wx.lib.filebrowsebutton import DirBrowseButton as dirbrowse_btn
 
 
 class MyApp(wx.App):
@@ -53,7 +54,7 @@ class MainFrame(wx.Frame):
         # load and setup icon and task bar icon.
         icon = wx.Icon('resources/relax.ico', wx.BITMAP_TYPE_ANY)
         self.SetIcon(icon)
-        self.taskbar_icon = wx.TaskBarIcon()
+        self.taskbar_icon = wx.adv.TaskBarIcon()
         self.taskbar_icon.SetIcon(icon, 'Relax')
 
         # when window close
@@ -156,7 +157,7 @@ class MainFrame(wx.Frame):
         panel.Fit()        # must have this
 
     # Get name, path of a source file, display its contents in list_en
-    def on_load(self, event):
+    def on_load(self, load):
         self.undo_dict = {'index': '', 'source': '', 'usr_input': '',
                           'raw_trans': '', 'trans': ''}
         self.redo_dict = {'index': '', 'trans': '', 'cur_index': ''}
@@ -178,8 +179,8 @@ class MainFrame(wx.Frame):
                                        style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE
                                        )
             for col, source in enumerate(self.source_list):
-                index = self.list_en.InsertStringItem(col, str(col))
-                self.list_en.SetStringItem(index, 1, source)
+                index = self.list_en.InsertItem(col, str(col))
+                self.list_en.SetItem(index, 1, source)
                 done_count += 1
                 dialog.Update(done_count)
             dialog.Destroy()
@@ -220,7 +221,7 @@ class MainFrame(wx.Frame):
         self.redo_dict['trans'] = trans
 
         self.source_list[self.index] = trans
-        self.list_en.SetStringItem(index, 1, trans)
+        self.list_en.SetItem(index, 1, trans)
 
         self.undo.Enable(True)
         self.redo.Enable(True)
@@ -340,7 +341,7 @@ class MainFrame(wx.Frame):
 
         self.list_en.Focus(index)
         self.source_list[index] = source
-        self.list_en.SetStringItem(index, 1, source)
+        self.list_en.SetItem(index, 1, source)
         self.list_en.SetItemState(index, wx.LIST_STATE_SELECTED,
                                   wx.LIST_STATE_SELECTED)
         self.cont_cns.SetValue(usr_input)
@@ -353,7 +354,7 @@ class MainFrame(wx.Frame):
         cur_index = self.redo_dict['cur_index']
 
         self.source_list[index] = trans
-        self.list_en.SetStringItem(index, 1, trans)
+        self.list_en.SetItem(index, 1, trans)
         self.list_en.Focus(cur_index)
         self.list_en.SetItemState(cur_index, wx.LIST_STATE_SELECTED,
                                   wx.LIST_STATE_SELECTED)
@@ -391,7 +392,7 @@ class MainFrame(wx.Frame):
     def dialog_get_file():
         dialog = wx.FileDialog(
             None, message='Choose a file', defaultDir=os.getcwd(),
-            defaultFile='', wildcard='*.csv', style=wx.OPEN
+            defaultFile='', wildcard='*.csv', style=wx.FD_OPEN
             )
         if dialog.ShowModal() == wx.ID_OK:
             file_path = dialog.GetPath()
@@ -406,9 +407,13 @@ class MainFrame(wx.Frame):
     @staticmethod
     def dialog_save_file(file_name):
         dialog = wx.FileDialog(
-            None, message='Save file as ...', defaultDir=os.getcwd(),
-            defaultFile=file_name, wildcard='*.csv', style=wx.SAVE
-            )
+            None, 
+            message='Save file as ...',
+            defaultDir=os.getcwd(),
+            defaultFile=file_name, 
+            wildcard='*.csv', 
+            style=wx.FD_SAVE
+        )
         if dialog.ShowModal() == wx.ID_OK:
             file_path = dialog.GetPath()
         return file_path
@@ -454,16 +459,18 @@ class DirDialog(wx.Dialog):
         panel = wx.Panel(self)
         ok_btn = wx.Button(panel, wx.ID_OK, 'OK')
         cancel_btn = wx.Button(panel, wx.ID_CANCEL, 'Cancel')
-        self.dir_browse1 = dirbrowse_btn(panel, -1,
-                                         newDirectory=True,
-                                         startDirectory=os.getcwd(),
-                                         labelText='source directory:',
-                                         )
-        self.dir_browse2 = dirbrowse_btn(panel, -1,
-                                         newDirectory=True,
-                                         startDirectory=os.getcwd(),
-                                         labelText='translation directory:',
-                                         )
+        self.dir_browse1 = wx.lib.filebrowsebutton.FileBrowseButton(
+            panel,
+            -1,
+            startDirectory=os.getcwd(),
+            labelText='source directory:',
+        )
+        self.dir_browse2 = wx.lib.filebrowsebutton.FileBrowseButton(
+            panel,
+            -1,
+            startDirectory=os.getcwd(),
+            labelText='translation directory:',
+        )
         hbox = wx.BoxSizer()
         hbox.Add(ok_btn, proportion=0, flag=wx.ALL, border=5)
         hbox.Add(cancel_btn, proportion=0, flag=wx.ALL, border=5)

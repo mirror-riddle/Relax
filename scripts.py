@@ -1,5 +1,5 @@
-# -*- coding: utf8 -*-
-# !usr/bin/env python
+# -*- coding: utf-8 -*-
+#! /usr/bin/env python
 
 """
 ===============================================================================
@@ -10,7 +10,7 @@
 import re
 import logging
 import pymongo
-import MySQLdb
+#import MySQLdb
 import datetime
 
 pat_Chinese = re.compile(u'[\u2E80-\u9FFF]')
