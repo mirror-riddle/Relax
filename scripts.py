@@ -10,7 +10,6 @@
 import re
 import logging
 import pymongo
-#import MySQLdb
 import datetime
 
 pat_Chinese = re.compile(u'[\u2E80-\u9FFF]')
@@ -113,7 +112,6 @@ def get_source_list(file_path):
 
     return (source_list, reject_list)
 
-
 def get_dict(file_path):
     """get source and trans dict from source and trans list"""
 
@@ -128,67 +126,12 @@ def get_dict(file_path):
     return (dict(source_list), reject_list)
 
 
-# this is deprecated
-def get_mysql_login():
-    """Get mysql login information from my.ini"""
-
-    with open('resources/my.ini', 'U') as configure_file:
-        configure_list = configure_file.readlines()
-    # remove comments and blank lines
-    for index, item in enumerate(configure_list):
-        item_list = item.split('#')
-        if item_list[0] and item_list[0] != '\n':
-            configure_list[index] = item_list[0]
-        else:
-            # can't directly remove item, in which case index would be messed.
-            # configure_list.remove(item)
-            configure_list[index] = None
-    # remove all None
-    remove_None(configure_list)
-
-    # remove blank spaces
-    for index, item in enumerate(configure_list):
-        item_list = item.split('=')
-        for i, value in enumerate(item_list):
-            item_list[i] = value.strip()
-        configure_list[index] = item_list
-    configure_dict = dict(configure_list)
-
-    return configure_dict
-
-
-# this is deprecated.
-def conn_mysql():
-    """connect to mysql server"""
-
-    login = get_mysql_login()
-    print login
-    conn = MySQLdb.connect(**login)
-    cursor = conn.cursor()
-    database = 'translation'
-    create = 'CREATE DATABASE `%s`' % database
-    try:
-        cursor.execute(create)
-    except:
-        pass
-    conn.select_db(database)
-
-    return (conn, cursor)
-
-
 def connect_mongo():
     """connect to mongodb, return the working database"""
 
     client = pymongo.MongoClient()
     database = client.translation
     return database
-
-
-# this is deprecated.
-def disc_mysql(conn, cursor):
-    cursor.close()
-    conn.close()
-
 
 def config_logging():
     """using logging to record errors and info"""

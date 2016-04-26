@@ -7,67 +7,6 @@ Relax 是为提高骑马与砍杀战团mod汉化效率而制作的一款工具�
 
 ##软件安装和配置
 
-###必备数据库软件：mysql
-
-mysql community server 5.5.38 的下载地址：
-[http://dev.mysql.com/downloads/mysql/5.5.html#downloads](http://dev.mysql.com/downloads/mysql/5.5.html#downloads )
-
-安装过程和普通软件一样，**你唯一需要记住的是mysql的安装位置和你设置的mysql登录密码**。
-
-安装完毕后，进入mysql安装目录，比如：*C:\Program Files (x86)\MySQL\MySQL Server 5.5*，在目录下找到*my.ini*文件，在文件里加上如下代码。注意，文件里已有的项只需要把 = 后面的值改成下面的值，没有的项就直接加。
-
-    [client]
-    default-character-set = utf8
-    
-    [mysql]
-    default-character-set = utf8
-    
-    [mysqld]
-    init__connect='SET collation_connection = utf8_unicode_ci'
-    character-set-server = utf8
-    collation-server = utf8_unicode_ci
-    
-
-mysql安装完成后应该会自动启动mysql服务，否则你需要以管理员身份打开Windows的命令提示符手动启动：
-
-`net start mysql`
-
-###Hosts文件设置
-
-用记事本打开hosts文件（C:\Windows\System32\drivers\etc\hosts)，查看有无下面这行代码，没有的话就加上。
-
-`127.0.0.1       localhost`
-
-如果你发现代码是这样的：
-
-`#127.0.0.1 localhost`
-
-那就把#去掉。
-
-如果你在文件里还发现了这行代码，
-
-`::1  localhost`
-
-那就在它前面加个#号。
-
-###Relax配置
-
-下载Relax压缩包，在任意处解压，Relax.exe是主运行文件，但在运行前你需要先配置my.ini。
-
-在Relax下resources文件夹下找到my.ini文件，打开你会看到有以下四项：
-
-    host = localhost
-    
-    user = root
-    
-    passwd =
-    
-    charset = utf8
-
-在passwd项后面填入你的mysql登录密码，其他的不要改。
-
-现在，双击Relax.exe，就可以打开程序了。
-
 
 ##Relax 使用说明
 
@@ -206,17 +145,31 @@ notepad++ v6.6.7 下载地址：[http://notepad-plus-plus.org/download/v6.6.7.ht
 
 把该条目复制粘贴到这里可以看出here旁边有个奇异字符，手动进原文件删除它即可。
 
-#####合作开发
+##### 开发
 
 Relax是开源软件，你可以在Github上找到clone源码：[https://github.com/mirror-riddle/Relax](https://github.com/mirror-riddle/Relax)
 
-开发环境和工具：
+1. python 2.7，需要安装wxpython3和pymongo
+	* 安装wxpython3 Phoenix版本
+		
+		参考 http://wxpython.org/Phoenix/snapshot-builds/README.txt
+		
+	* 安装pymongo
+	
+		pip install pymongo
 
-1. windows 7，由于python的跨平台性，在Linux下也是可以开发的。
-2. python 2.7，需要安装wxpython 3和mysql-python 1.25包。
-3. mysql-server 5.5，必须与mysql-python版本对应。
-4. notepad++, 用于查看csv文件。
+2. mongodb 3.2, 下载[mongodb](https://docs.mongodb.org/manual/tutorial/install-mongodb-on-windows/)
+	
+	下载并安装mongodb
+	
+	打开windows命令提示符，输入 md /data/db
 
+4. 运行程序
+	
+	先启动mongodb: 双击C:\Program Files\MongoDB\Server\3.2\bin\mongod.exe 这里假设mongodb安装在该目录C:\Program Files\MongoDB下）。
+	python menu.py
+	
+5. 安装notepad++, 用于查看csv文件，可选。
 
 #####bug提交
 
